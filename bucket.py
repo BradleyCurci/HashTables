@@ -13,6 +13,9 @@ class Bucket:
     
     def get_key(self):
         return self.__key
+    
+    def set_value(self, value):
+        self.__value = value
 
     def __str__(self):
         return f'Bucket {id(self)}:\nKey: {self.__key}\nValue: {self.__value}'
