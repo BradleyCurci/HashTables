@@ -5,16 +5,26 @@ from hash_table import HashTable
 import time
 import random
 
+global search_value
+
 def get_number(lower, upper):
     number = random.randint(lower, upper)
     return number
 
 # returns a list of random numbers between 0, size 
 def get_number_list(length):
+    global search_value
     return_list = []
+    
+    # Random number describing the index of a value that will later be used for searching.
+    # if index i matches the search number index, we will later search for whatever number was generated at that index
+    search_number_index = get_number(1, length)
     for i in range(length):
+        number = get_number(0, length)
+        if i == search_number_index:
+            search_value = number
         print(f'Generating {length} sample values...   [{color_text(str(i + 1), 'blue')}/{color_text(str(length), 'blue')}]  {color_text(str(int((i + 1)/length * 100)), "green")}%', end="\r")
-        return_list.append(get_number(0, length))
+        return_list.append(number)
     print()
     return return_list
 
@@ -44,113 +54,109 @@ def print_banner():
     print(''.join(" " for _ in range(int((30 / 2) - (text_length / 2)))) + text)
     print(''.join("=" for _ in range(30)))
     print()
-    print("Welcome to the B2U lesson on Hash Tables!")
+    print("Welcome to the C2U demonstration on Hash Tables!")
     print("Please be sure to explore this program in its entirety before disecting the code.")
+    print("To quit the program, enter 'exit' when prompted to enter a size.")
     print()
 
-def print_progress_bar(current_iteration, total_iterations):
-    total_length = 100
-
-
-def print_storing_results(size, unique_keys, time, collisions):
+def print_storing_results(size, time, distribution, collisions):
     print()
     print(f'Successfully stored {color_text(str(size), 'blue')} values')
-    print(f'{color_text(str(unique_keys), 'blue')} unique keys ({int((unique_keys / size) * 100)}% distribution)')
-    print(f'{color_text(str(collisions), 'red')} collisions ({int((collisions / size) * 100)}% collison rate)')
-    print(f'Time: {round((time * 1000), 4)} ms')
+    print(f'Collisions: {collisions} ({round(((collisions / size) * 100), 2)}%)')
+    print(f'Time: {round((time*1000), 4)} ms')
+    print(f'Distribution: {distribution}%')
     print()
-
-
-
-def mid_square_hashing(size):
-    table = HashTable(size)
-
-    # Create a list of random numbers
-    values = get_number_list(size)
-
-    # Create key, create, bucket, and insert bucket into table
-    timer_start = time.time()
-    for value in values:
-        key = table.mid_square_hash(value)
-        bucket = Bucket(key, value)
-        table.insert(bucket)
-    timer_end = time.time()
-    time_length = timer_end - timer_start
-    collisions = table.get_collisions()
-    unique_keys = table.get_unique_keys()
-    unique_keys_text = ''
-    if unique_keys >= table.get_size() // 2:
-        unique_keys_text = color_text(str(unique_keys), 'green')
-    else:
-        unique_keys_text = color_text(str(unique_keys), 'yellow')
-
-    print_storing_results(size, unique_keys, time_length, collisions)
-
+    
+def print_searching_results(value, key, index, time):
+    print()
+    print(f'Successfull located value {color_text(str(value), 'blue')}')
+    print(f'Key: {key}')
+    print(f'Index: {index}')
+    print(f'Time: {round(time*1000, 4)} ms')
+    print()
+    
 def modulo_hash(size):
+    global search_value
+    
     table = HashTable(size)
 
     values = get_number_list(size)
 
-    timer_start = time.time()
+    timer_start_store = time.perf_counter()
     for value in values:
         key = table.modulo_hash(value)
         bucket = Bucket(key, value)
         table.insert(bucket)
-    timer_end = time.time()
-    time_length = timer_end - timer_start
+    timer_end_store = time.perf_counter()
+    distribution = table.calculate_distribution()
+    time_length_store = timer_end_store - timer_start_store
     collisions = table.get_collisions()
-    unique_keys = table.get_unique_keys()
-    if unique_keys >= table.get_size() // 2:
-        unique_keys_text = color_text(str(unique_keys), 'green')
-    else:
-        unique_keys_text = color_text(str(unique_keys), 'yellow')
 
-    print_storing_results(size, unique_keys, time_length, collisions)
+    print_storing_results(size, time_length_store, distribution, collisions)
+    
+    print(f'Searching for: {search_value}')
+    
+    timer_start_search = time.perf_counter()
+    
+    key, index = table.search(search_value)
+    
+    timer_end_search = time.perf_counter()
+    
+    timer_length_search = timer_end_search - timer_start_search
+    
+    print_searching_results(search_value, key, index, timer_length_search)
+    
 
+def get_user_input():
+    
+    valid_size = False
+    
+    while not valid_size:
+        size = input('Enter an amount of data to generate: ')
+        
+        if size == 'exit':
+            return 'exit'
 
-
-def select_demo():
-    print("Select one of the following algorithms to run:")
-    print('[1] Modulo Hash')
-    print('[2] Mid-square hash')
-    print('[3] Mid_square hash (base 2)')
-    print('[4] Multiplicative String Hash')
-
-    valid_input = False
-    while not valid_input:
-        selection = input()
-        if not selection.isdigit():
-            print("Selection must be of type integer.")
-            continue
-        else:
-            selection = int(selection)
-
-        if not 0 < selection < 5:
-            print("Selection Must be between digits 1 - 4.")
+        if not size.isdigit():
+            print('Input must be of type int. Try again.')
             continue
         
-        size = input("Please enter the length of data to generate: ")
-        if not size.isdigit():
-            print('Size must be of type integer.')
-            continue
+        size = int(size)
+        
+        
+        if size > 500000:
+            print("We advise against generating more than 500,000 data points as it may incur stress on your system.")
+            
+            valid_choice = False
+            while not valid_choice:
+                user_choice = input('Would you like to continue? (y/n): ')
+                
+                if user_choice.lower() == 'y':
+                    valid_choice = True
+                    valid_size = True
+                elif user_choice.lower() == 'n':
+                    valid_choice = True
+                else:
+                    print(f"Unrecognized character '{user_choice}'. Try agian.")
         else:
-            size = int(size)
-            valid_input = True
-
-    if selection == 1:
-        modulo_hash(size)
-    elif selection == 2:
-        mid_square_hashing(size)
-    elif selection == 3:
-        print("RUNNING MID_SQUARE HASH BASE 2")
-    elif selection == 4:
-        print('RUNNING MULTIPLICATIVE STRING HASH')
+            valid_size = True
+    
+    return size
+        
+        
 
 if __name__ == "__main__":
 
     print_banner()
-
-    select_demo()
+    
+    exit = False
+    while not exit:
+        user_size = get_user_input()
+        if user_size == 'exit':
+            exit = True
+            continue
+        
+        modulo_hash(user_size)
 
     
     
